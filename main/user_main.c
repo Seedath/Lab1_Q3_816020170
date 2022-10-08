@@ -26,32 +26,31 @@
 static const char *TAG = "main";
 
 
-#define I2C_MASTER_SCL_IO           2                	/*!< gpio number for I2C master clock */
-#define I2C_MASTER_SDA_IO			0					/*!< gpio number for I2C master data  */
-#define I2C_MASTER_NUM              I2C_NUM_0        	/*!< I2C port number for master dev */
-#define I2C_MASTER_TX_BUF_DISABLE   0                	/*!< I2C master do not need buffer */
-#define I2C_MASTER_RX_BUF_DISABLE   0                	/*!< I2C master do not need buffer */
+#define I2C_MASTER_SCL_IO           	2                	/*!< gpio number for I2C master clock */
+#define I2C_MASTER_SDA_IO	    	0			/*!< gpio number for I2C master data  */
+#define I2C_MASTER_NUM              	I2C_NUM_0        	/*!< I2C port number for master dev */
+#define I2C_MASTER_TX_BUF_DISABLE   	0                	/*!< I2C master do not need buffer */
+#define I2C_MASTER_RX_BUF_DISABLE   	0                	/*!< I2C master do not need buffer */
 
 // define ADS1115 pin addresses
-#define ADS1115_GND 						0x48
-#define ADS1115_VDD 						0x49
-#define ADS1115_SDA 						0x4A
-#define ADS1115_SCL 						0x4B
+#define ADS1115_GND 			0x48
+#define ADS1115_VDD 			0x49
+#define ADS1115_SDA 			0x4A
+#define ADS1115_SCL 			0x4B
 
-#define WRITE_BIT                           I2C_MASTER_WRITE 	/*!< I2C master write */
-#define READ_BIT                            I2C_MASTER_READ  	/*!< I2C master read */
-#define ACK_CHECK_EN                        0x1              	/*!< I2C master will check ack from slave*/
-#define ACK_CHECK_DIS                       0x0              	/*!< I2C master will not check ack from slave */
-#define ACK_VAL                             0x0              	/*!< I2C ack value */
-#define NACK_VAL                            0x1              	/*!< I2C nack value */
-#define LAST_NACK_VAL                       0x2              	/*!< I2C last_nack value */
+#define WRITE_BIT                       I2C_MASTER_WRITE 	/*!< I2C master write */
+#define READ_BIT                        I2C_MASTER_READ  	/*!< I2C master read */
+#define ACK_CHECK_EN                    0x1              	/*!< I2C master will check ack from slave*/
+#define ACK_CHECK_DIS                   0x0              	/*!< I2C master will not check ack from slave */
+#define ACK_VAL                         0x0              	/*!< I2C ack value */
+#define NACK_VAL                        0x1              	/*!< I2C nack value */
+#define LAST_NACK_VAL                   0x2              	/*!< I2C last_nack value */
 
 // define ASD1115 reg addresses
-#define ADS1115_CONV 						0x00				//conversion reg
-#define ADS1115_CONFIG 						0x01				//configuration reg
-#define ADS1115_LOTHRESH 					0x02				//low threshold value
-#define ADS1115_HITHRESH 					0x03				//high threshold values
-
+#define ADS1115_CONV 			0x00			//conversion reg
+#define ADS1115_CONFIG 			0x01			//configuration reg
+#define ADS1115_LOTHRESH 		0x02			//low threshold value
+#define ADS1115_HITHRESH 		0x03			//high threshold values
 
 /**
  * @brief i2c master initialization
@@ -161,10 +160,12 @@ static esp_err_t i2c_master_ads1115_read(i2c_port_t i2c_num, uint8_t reg_address
 static esp_err_t data_write(i2c_port_t i2c_num, uint8_t reg_address, uint16_t data)
 {
     int ret;
+    // temp matrix
     uint8_t temp[2];
+    //break 16 bit data into 8 bits
     temp[0] = (data >> 8) & 0xFF;
     temp[1] = (data >> 0) & 0xFF;
-
+    //write 8 bits at a time
     ret = i2c_master_ads1115_write(i2c_num, reg_address, temp, 2);
     return ret;
 }
@@ -172,8 +173,9 @@ static esp_err_t data_write(i2c_port_t i2c_num, uint8_t reg_address, uint16_t da
 static esp_err_t data_read(i2c_port_t i2c_num, uint8_t reg_address, uint16_t *data)
 {
     int ret;
+    // temp matrix
     uint8_t temp[2];
-
+    //read 8 bits at a time
     ret = i2c_master_ads1115_read(i2c_num, reg_address, temp, 2);
     *data = (temp[0] << 8) | temp[1];
     return ret;
@@ -185,17 +187,18 @@ static esp_err_t i2c_master_ads1115_init(i2c_port_t i2c_num)
     vTaskDelay(100 / portTICK_RATE_MS);
 
     i2c_master_init();
+    //Set each bit of the 16 bit config
+    uint8_t OS = 0x00;		// Operational Status: NULL
+    uint8_t MUX = 0x04;       	// Input MUX: AINp = AIN0 and AINn = GND
+    uint8_t PGA = 0x01;       	// Programmable Gain Amp: FS = 4.096 V
+    uint8_t MODE = 0x00;      	// Mode : Continuous-Conversion Mode
+    uint8_t DR = 0x04;        	// Data Rate: 128SPS
+    uint8_t COMP_MODE = 0x00; 	// Comparator Mode: Traditional Comparator
+    uint8_t COMP_POL = 0x00;  	// Comparator Polarity: Active Low
+    uint8_t COMP_LAT = 0x00;  	// Latching Comparator: Non-latching Comparator
+    uint8_t COMP_QUE = 0x02;  	// Comparator Queue and Disable: Assert After Four Conversions
 
-    uint8_t OS = 0x00;			// NULL
-    uint8_t MUX = 0x04;       	// AINp = AIN0 and AINn = GND
-    uint8_t PGA = 0x01;       	// FS = 4.096 V
-    uint8_t MODE = 0x00;      	// Continuous-Conversion Mode
-    uint8_t DR = 0x04;        	// 128SPS
-    uint8_t COMP_MODE = 0x00; 	// Traditional Comparator
-    uint8_t COMP_POL = 0x00;  	// Active Low
-    uint8_t COMP_LAT = 0x00;  	// Non-latching Comparator
-    uint8_t COMP_QUE = 0x02;  	// Assert After Four Conversions
-
+    //push configured bits into the 16 bit varable conf_data
     conf_data = (OS << 3) | MUX;
     conf_data = (conf_data << 3) | PGA;
     conf_data = (conf_data << 1) | MODE;
@@ -205,10 +208,10 @@ static esp_err_t i2c_master_ads1115_init(i2c_port_t i2c_num)
     conf_data = (conf_data << 1) | COMP_LAT;
     conf_data = (conf_data << 2) | COMP_QUE;
 
-    // Output Configuration Bits
+    //output CONFIG bits
     ESP_LOGI(TAG, "Configuration Bits: %d\n", (int)conf_data);
 
-    // Writing to CONFIG Register
+    //write to CONFIG Reg
     ESP_ERROR_CHECK(data_write(i2c_num, ADS1115_CONFIG, conf_data));
 
    return ESP_OK;
@@ -226,6 +229,7 @@ static void i2c_task(void *arg)
         ret = data_read(I2C_MASTER_NUM, ADS1115_CONV, &adc_data);
         if(ret == ESP_OK){
             ESP_LOGI(TAG, "ADS1115 Read!\n");
+	    // use formula from datasheet
             voltage = (double)adc_data * 1.25e-4;
             ESP_LOGI(TAG, "Voltage = %d.%d V\n", (uint16_t)voltage, (uint16_t)(voltage * 100) % 100);
             vTaskDelay(2000 / portTICK_PERIOD_MS);
